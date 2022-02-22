@@ -12,14 +12,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Jille/raft-grpc-leader-rpc/leaderhealth"
 	"github.com/Jille/raft-grpc-leader-rpc/rafterrors"
 	transport "github.com/Jille/raft-grpc-transport"
-	"github.com/Jille/raftadmin"
 	"github.com/hashicorp/raft"
 	boltdb "github.com/hashicorp/raft-boltdb"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/reflection"
 )
 
 var myraft *raft.Raft
@@ -44,24 +41,23 @@ func (kv *KV) InitRaft(serverAddr string, id string, bs bool) {
 	if err != nil {
 		fmt.Printf("Error creating Raft %v", err)
 	}
-	s := grpc.NewServer()
-	tm.Register(s)
-	leaderhealth.Setup(r, s, []string{"Example"})
-	raftadmin.Register(s, r)
-	reflection.Register(s)
+
 	_, port, err := net.SplitHostPort(serverAddr)
 	if err != nil {
 		log.Fatalf("failed to parse local address (%q): %v", serverAddr, err)
 	}
+
 	sock, err := net.Listen("tcp", fmt.Sprintf(":%s", port))
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
+	defer sock.Close()
 
+	s := grpc.NewServer()
+	tm.Register(s)
 	if err := s.Serve(sock); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
-	fmt.Println("Done KV.InitRaft")
 }
 
 func (kv *KV) Apply(l *raft.Log) interface{} {

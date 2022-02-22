@@ -23,6 +23,15 @@ var (
 func main() {
 	flag.Parse()
 	mykv = &kv.KV{}
+
+	if *bs {
+		go runServer()
+	}
+
+	mykv.InitRaft(*serverAddr, *nodeId, *bs)
+}
+
+func runServer() {
 	fmt.Println("Starting on " + string(*serverAddr))
 
 	router := mux.NewRouter()
@@ -41,24 +50,18 @@ func main() {
 	router.HandleFunc("/AddVoter/{voter}/{id}", handleAddVoter)
 
 	log.Println("KV Server is running!")
-	// done := make(chan bool)
 	go func() {
 		err := server.ListenAndServe()
 		if err != nil {
 			log.Printf("KV Server Main Listen and serve: %v", err)
 		}
-		// done <- true
 	}()
-
-	mykv.InitRaft(*serverAddr, *nodeId, *bs)
-
-	//wait shutdown
 	server.WaitShutdown()
 
 	server.CloseMain()
 
-	// <-done
 	log.Printf("KV Server DONE!")
+
 }
 
 func handleMain(rw http.ResponseWriter, r *http.Request) {
