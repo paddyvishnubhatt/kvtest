@@ -1,0 +1,30 @@
+syntax = "proto3";
+package kv;
+
+message Key {
+    string key = 1;
+}
+
+message KV {
+    string key = 1;
+    string val = 2;
+}
+
+message Response {
+    int32 code = 1;
+    string message = 2;
+}
+
+message Voter {
+    string address = 1;
+    string id = 2;
+}
+
+message EmptyParams {}
+
+service RPCService {
+    rpc Monitor(EmptyParams) returns (Response) {}
+    rpc GetVal (Key) returns (KV) {}
+    rpc StoreKV (KV) returns (Response) {}
+    rpc AddNode(Voter) returns (Response) {}
+}

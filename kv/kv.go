@@ -27,13 +27,14 @@ const LOG_FILE = "logs.dat"
 const SFILE = "stable.dat"
 const SEPARATOR = "_"
 
-type KV struct {
+type KeyVal struct {
 	Done chan bool
 	mtx  sync.RWMutex
 	kv   map[string]string
+	UnimplementedRPCServiceServer
 }
 
-func (kv *KV) InitRaft(serverAddr string, id string, bs bool) {
+func (kv *KeyVal) InitRaft(serverAddr string, id string, bs bool) {
 	fmt.Printf("In KV.InitRaft %v %v %v\n", serverAddr, id, bs)
 	ctx := context.Background()
 	r, tm, err := kv.SetupRaft(ctx, id, serverAddr, bs)
@@ -55,12 +56,15 @@ func (kv *KV) InitRaft(serverAddr string, id string, bs bool) {
 
 	s := grpc.NewServer()
 	tm.Register(s)
+	RegisterRPCServiceServer(s, &KeyVal{})
 	if err := s.Serve(sock); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
+
+	s.Stop()
 }
 
-func (kv *KV) Apply(l *raft.Log) interface{} {
+func (kv *KeyVal) Apply(l *raft.Log) interface{} {
 	fmt.Println("In KV.Apply " + string(l.Data))
 	kv.mtx.Lock()
 	defer kv.mtx.Unlock()
@@ -70,26 +74,26 @@ func (kv *KV) Apply(l *raft.Log) interface{} {
 	return nil
 }
 
-func (kv *KV) Restore(r io.ReadCloser) error {
+func (kv *KeyVal) Restore(r io.ReadCloser) error {
 	fmt.Println("In KV.Restore TBD")
 
 	return nil
 }
 
-func (kv *KV) Snapshot() (raft.FSMSnapshot, error) {
+func (kv *KeyVal) Snapshot() (raft.FSMSnapshot, error) {
 	fmt.Println("In KV.Snapshot TBD")
 
 	return nil, nil
 }
 
-func (kv *KV) Get(key string) string {
+func (kv *KeyVal) Get(key string) string {
 	fmt.Println("KV.Getting " + key)
 	kv.mtx.RLock()
 	defer kv.mtx.RUnlock()
 	return kv.kv[key]
 }
 
-func (kv *KV) Put(key string, val string) error {
+func (kv *KeyVal) Put(key string, val string) error {
 	fmt.Println("KV.Putting " + key + " " + val)
 	f := myraft.Apply([]byte(key+SEPARATOR+val), time.Second)
 	if err := f.Error(); err != nil {
@@ -98,7 +102,7 @@ func (kv *KV) Put(key string, val string) error {
 	return nil
 }
 
-func (kv *KV) AddVoter(voter string, id string) error {
+func (kv *KeyVal) AddVoter(voter string, id string) error {
 	fmt.Println("KV.AddVoter " + voter + " " + id)
 	f := myraft.AddVoter(raft.ServerID(id), raft.ServerAddress(voter), 0, time.Second)
 	if err := f.Error(); err != nil {
@@ -107,7 +111,7 @@ func (kv *KV) AddVoter(voter string, id string) error {
 	return nil
 }
 
-func (kv *KV) SetupRaft(ctx context.Context, myID, myAddress string, bs bool) (*raft.Raft, *transport.Manager, error) {
+func (kv *KeyVal) SetupRaft(ctx context.Context, myID, myAddress string, bs bool) (*raft.Raft, *transport.Manager, error) {
 	c := raft.DefaultConfig()
 	c.LocalID = raft.ServerID(myID)
 	baseDir := filepath.Join(DATA_DIR, myID)
@@ -153,4 +157,50 @@ func (kv *KV) SetupRaft(ctx context.Context, myID, myAddress string, bs bool) (*
 	kv.kv = make(map[string]string)
 
 	return r, tm, nil
+}
+
+func (kv *KeyVal) Monitor(ctx context.Context, in *EmptyParams) (*Response, error) {
+	log.Printf("Monitor\n")
+	// build key
+	response := &Response{
+		Code:    1,
+		Message: "Success",
+	}
+	// store w/ the pkey
+	// return the key
+	return response, nil
+}
+
+func (kv *KeyVal) GetVal(ctx context.Context, in *Key) (*KV, error) {
+	log.Printf("Received to retrieve from DB : %v\n", in.GetKey())
+	// retrieve data from received key
+	key := in.GetKey()
+	val := kv.Get(key)
+	kvi := &KV{
+		Key: key,
+		Val: val,
+	}
+	return kvi, nil
+}
+
+func (kv *KeyVal) StoreKV(ctx context.Context, in *KV) (*Response, error) {
+	log.Printf("Received to Store in DB: %v %v\n", in.GetKey(), in.GetVal())
+	// build key
+	response := &Response{
+		Code:    1,
+		Message: "Success",
+	}
+	err := kv.Put(in.GetKey(), in.GetVal())
+	return response, err
+}
+
+func (kv *KeyVal) AddNode(ctx context.Context, in *Voter) (*Response, error) {
+	log.Printf("In AddNode: %v %v\n", in.GetAddress(), in.GetId())
+	// build key
+	response := &Response{
+		Code:    1,
+		Message: "Success",
+	}
+	err := kv.AddVoter(in.GetAddress(), in.GetId())
+	return response, err
 }

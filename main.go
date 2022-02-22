@@ -12,7 +12,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-var mykv *kv.KV
+var mykv *kv.KeyVal
 
 var (
 	serverAddr = flag.String("address", "localhost:10001", "TCP host+port for this node")
@@ -22,7 +22,7 @@ var (
 
 func main() {
 	flag.Parse()
-	mykv = &kv.KV{}
+	mykv = &kv.KeyVal{}
 
 	if *bs {
 		go runServer()
