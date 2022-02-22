@@ -31,14 +31,14 @@ func main() {
 		log.Fatalf("Did not connect to RPC: %v", err)
 	}
 
-	rpcClient := kv.NewRPCServiceClient(rpcConn)
+	kvStore := kv.NewRPCServiceClient(rpcConn)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
 	if strings.EqualFold(*command, "monitor") {
 		ep := &kv.EmptyParams{}
-		ret, err := rpcClient.Monitor(ctx, ep)
+		ret, err := kvStore.Monitor(ctx, ep)
 		if err != nil {
 			log.Fatalf("Could not Monitor: %v", err)
 		}
@@ -50,7 +50,7 @@ func main() {
 			Address: *serverAddr,
 			Id:      *nodeId,
 		}
-		ret, err := rpcClient.AddNode(ctx, voter)
+		ret, err := kvStore.AddNode(ctx, voter)
 		if err != nil {
 			log.Fatalf("Could not AddNode: %v %v\n", err, voter)
 		}
@@ -63,7 +63,7 @@ func main() {
 		}
 		fmt.Printf("Storing in DB via rpc %v\n", kvi)
 
-		ret, err := rpcClient.StoreKV(ctx, kvi)
+		ret, err := kvStore.StoreKV(ctx, kvi)
 
 		if err != nil {
 			log.Fatalf("Could not Store KV: %v", err)
@@ -76,7 +76,7 @@ func main() {
 
 		fmt.Printf("Retrieving data from DB via rpc %v\n", pkey)
 
-		r_kv, err := rpcClient.GetVal(ctx, pkey)
+		r_kv, err := kvStore.GetVal(ctx, pkey)
 
 		if err != nil {
 			log.Fatalf("Could not retrieve person: %v", err)
