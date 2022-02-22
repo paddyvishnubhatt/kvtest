@@ -1,4 +1,4 @@
-# Simple k-v store using hashicorp raft
+# Simple distributed k-v store using hashicorp raft for consensus
 
 To build
 1. Check out git code
