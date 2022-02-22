@@ -30,10 +30,10 @@ type KV struct {
 	kv   map[string]string
 }
 
-func (kv *KV) InitRaft() {
-	fmt.Println("In KV.InitRaft")
+func (kv *KV) InitRaft(serverAddr string) {
+	fmt.Println("In KV.InitRaft " + serverAddr)
 	ctx := context.Background()
-	err := kv.SetupRaft(ctx, "node1", "localhost:68964")
+	err := kv.SetupRaft(ctx, "node1", serverAddr)
 	if err != nil {
 		fmt.Printf("Error creating Raft %v", err)
 	}

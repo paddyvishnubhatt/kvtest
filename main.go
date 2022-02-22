@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"kvtest/kv"
 	"kvtest/server"
@@ -13,9 +14,16 @@ import (
 
 var mykv *kv.KV
 
+var (
+	serverAddr = flag.String("address", "localhost:68964", "TCP host+port for this node")
+)
+
 func main() {
+	flag.Parse()
 	mykv = &kv.KV{}
-	mykv.InitRaft()
+	fmt.Println("Starting on " + string(*serverAddr))
+
+	mykv.InitRaft(*serverAddr)
 
 	router := mux.NewRouter()
 
