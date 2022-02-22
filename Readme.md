@@ -14,5 +14,18 @@
 
 1. main launches the raft/KV and http server
 2. http server (get/put) is used to wrap the raft/kv commands
+3. main also launches rpc server which listens on the same port as passed in the address
+4. sample rpc client output
 
-Note: A lot of hardcoding in the code - needs to be weeded out, Implement snapshot restore etc. Wrap this around grpc instead of http server etc
+./kvclient
+Connecting to RPC Server
+2022/02/22 14:15:58 Response from RPC Server for AddNode : 1 Success
+2022/02/22 14:15:58 Response from RPC Server for AddNode : 1 Success
+2022/02/22 14:15:58 Response from RPC Server for Monitor : 1 Success
+Storing in DB via rpc key:"key1" val:"value1" 
+2022/02/22 14:15:58 Response from RPC Server for Store Data : 1 Success
+Retrieving data from DB via rpc key:"key1" 
+Retrieved from DB via rpc key1 
+
+
+Note: A lot of hardcoding in the code - needs to be weeded out, Implement snapshot restore etc.
