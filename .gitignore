@@ -8,6 +8,7 @@ node_modules/
 dist/
 bin/
 kvserver
+kvclient
 *.dat
 *.db
 snapshots/

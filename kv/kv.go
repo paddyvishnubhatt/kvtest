@@ -56,7 +56,7 @@ func (kv *KeyVal) InitRaft(serverAddr string, id string, bs bool) {
 
 	s := grpc.NewServer()
 	tm.Register(s)
-	RegisterRPCServiceServer(s, &KeyVal{})
+	RegisterRPCServiceServer(s, kv)
 	if err := s.Serve(sock); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}

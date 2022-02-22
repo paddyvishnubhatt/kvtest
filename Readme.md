@@ -17,15 +17,35 @@
 3. main also launches rpc server which listens on the same port as passed in the address
 4. sample rpc client output
 
-./kvclient
-Connecting to RPC Server
-2022/02/22 14:15:58 Response from RPC Server for AddNode : 1 Success
-2022/02/22 14:15:58 Response from RPC Server for AddNode : 1 Success
-2022/02/22 14:15:58 Response from RPC Server for Monitor : 1 Success
+Usage of ./kvclient:
+  -address string
+    	TCP host+port for this node (default "localhost:10002")
+  -command string
+    	monitor, addnode, set(key,val), get(key) (default "help")
+  -id string
+    	Node ID (default "node2")
+  -key string
+    	Key to test (default "somekey1")
+  -val string
+    	Val to set and test for key (default "someval1")
+
+% ./kvclient --command=addnode --address=localhost:10002 --id=node2
+Connecting to RPC Server addnode
+2022/02/22 14:50:46 Response from RPC Server for AddNode : 1 Success
+
+% ./kvclient --command=addnode --address=localhost:10003 --id=node3
+Connecting to RPC Server addnode
+2022/02/22 14:50:52 Response from RPC Server for AddNode : 1 Success
+
+% ./kvclient --command=set --key=key1 --val=value1                 
+Connecting to RPC Server set
 Storing in DB via rpc key:"key1" val:"value1" 
-2022/02/22 14:15:58 Response from RPC Server for Store Data : 1 Success
+2022/02/22 14:51:08 Response from RPC Server for Store Data : 1 Success
+
+ % ./kvclient --command=get --key=key1             
+Connecting to RPC Server get
 Retrieving data from DB via rpc key:"key1" 
-Retrieved from DB via rpc key1 
+Retrieved from DB via rpc key1 value1
 
 
 Note: A lot of hardcoding in the code - needs to be weeded out, Implement snapshot restore etc.
