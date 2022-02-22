@@ -1,21 +1,23 @@
 # Simple k-v store using hashicorp raft
 
+To build
 1. Check out git code
 2. make clean
 3. make
-4. ./kvserver --address=localhost:10001 --id=node1 --bs=true
-5. ./kvserver --address=localhost:10002 --id=node2 
-6. ./kvserver --address=localhost:10003 --id=node3 
-7. curl localhost:9000/AddVoter/localhost:10002/node2
-8. curl localhost:9000/AddVoter/localhost:10003/node3
-9. curl localhost:9000/Get/key1 
-10. curl localhost:9000/Put/key1/value1
-11. curl localhost:9000/Get/key1 
 
-1. main launches the raft/KV and http server
-2. http server (get/put) is used to wrap the raft/kv commands
-3. main also launches rpc server which listens on the same port as passed in the address
-4. sample rpc client output
+To run kv/raft nodes:
+1. ./kvserver --address=localhost:10001 --id=node1 --bs=true
+2. ./kvserver --address=localhost:10002 --id=node2 
+3. ./kvserver --address=localhost:10003 --id=node3 
+
+To Use web/server:
+1. curl localhost:9000/AddVoter/localhost:10002/node2
+2. curl localhost:9000/AddVoter/localhost:10003/node3
+3. curl localhost:9000/Get/key1 
+4. curl localhost:9000/Put/key1/value1
+5. curl localhost:9000/Get/key1 
+
+To use sample rpc client
 
 Usage of ./kvclient:
   -address string
@@ -46,6 +48,24 @@ Storing in DB via rpc key:"key1" val:"value1"
 Connecting to RPC Server get
 Retrieving data from DB via rpc key:"key1" 
 Retrieved from DB via rpc key1 value1
+
+# Introduction
+
+1. main launches the raft/KV and http server
+2. http server (get/put) is used to wrap the raft/kv commands
+3. main also launches rpc server which listens on the same port as passed in the address
+
+Each node is running an instance of raft under rpc. The raft part comes w/ hashicorp raft lib - the rpce is a wrapper on top. There's another http/web wrapper as well.
+
+Each rpc service implements basic RAFT functions to 
+1. AddNode (Voter)
+2. Get
+3. Put
+4. Monitor
+
+The FSM in this case is a KV - map (string,string) which is hidden inside kv and exposed via APIs above. 
+
+Clients (like rpc client or http curl) interact w/ the rpc service and thus manipulate and get State via APIs.
 
 
 Note: A lot of hardcoding in the code - needs to be weeded out, Implement snapshot restore etc.
