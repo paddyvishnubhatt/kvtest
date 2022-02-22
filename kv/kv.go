@@ -19,8 +19,6 @@ import (
 	"google.golang.org/grpc"
 )
 
-var myraft *raft.Raft
-
 const KV_STORE_NAME = "k-v-store"
 const DATA_DIR = "/tmp/raft_dir"
 const LOG_FILE = "logs.dat"
@@ -28,9 +26,9 @@ const SFILE = "stable.dat"
 const SEPARATOR = "_"
 
 type KeyVal struct {
-	Done chan bool
 	mtx  sync.RWMutex
 	kv   map[string]string
+	raft *raft.Raft
 	UnimplementedRPCServiceServer
 }
 
@@ -38,7 +36,7 @@ func (kv *KeyVal) InitRaft(serverAddr string, id string, bs bool) {
 	fmt.Printf("In KV.InitRaft %v %v %v\n", serverAddr, id, bs)
 	ctx := context.Background()
 	r, tm, err := kv.SetupRaft(ctx, id, serverAddr, bs)
-	myraft = r
+	kv.raft = r
 	if err != nil {
 		fmt.Printf("Error creating Raft %v", err)
 	}
@@ -95,7 +93,7 @@ func (kv *KeyVal) Get(key string) string {
 
 func (kv *KeyVal) Put(key string, val string) error {
 	fmt.Println("KV.Putting " + key + " " + val)
-	f := myraft.Apply([]byte(key+SEPARATOR+val), time.Second)
+	f := kv.raft.Apply([]byte(key+SEPARATOR+val), time.Second)
 	if err := f.Error(); err != nil {
 		return rafterrors.MarkRetriable(err)
 	}
@@ -104,7 +102,7 @@ func (kv *KeyVal) Put(key string, val string) error {
 
 func (kv *KeyVal) AddVoter(voter string, id string) error {
 	fmt.Println("KV.AddVoter " + voter + " " + id)
-	f := myraft.AddVoter(raft.ServerID(id), raft.ServerAddress(voter), 0, time.Second)
+	f := kv.raft.AddVoter(raft.ServerID(id), raft.ServerAddress(voter), 0, time.Second)
 	if err := f.Error(); err != nil {
 		return rafterrors.MarkRetriable(err)
 	}
