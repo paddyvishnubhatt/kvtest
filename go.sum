@@ -7,6 +7,8 @@ github.com/Jille/raft-grpc-leader-rpc v1.1.0 h1:u36rmA4tjp+4FSdZ17jg/1sfSCYNQIe5
 github.com/Jille/raft-grpc-leader-rpc v1.1.0/go.mod h1:l+pK+uPuqpFDFcPmyUPSng4257UXrST0Vc3Lo4XwVB0=
 github.com/Jille/raft-grpc-transport v1.2.0 h1:W/YSPz8IsirEyomjKmDog5Xk71o9+l4KhyMEX2TsgSs=
 github.com/Jille/raft-grpc-transport v1.2.0/go.mod h1:GQGUXJfjlzwA390Ox1AyVYpjCLhtGd6yqY9Sb5hpQfc=
+github.com/Jille/raftadmin v1.2.0 h1:hMLFUK7iKpeXP+CoIhNMWj+F53XOLSjMDSia0C60cps=
+github.com/Jille/raftadmin v1.2.0/go.mod h1:vtVEpToPGTUPVwwunypWDpi69JpdnHMhWRUlc/65U+Y=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
 github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
 github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=

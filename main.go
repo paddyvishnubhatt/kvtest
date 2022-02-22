@@ -17,14 +17,13 @@ var mykv *kv.KV
 var (
 	serverAddr = flag.String("address", "localhost:10001", "TCP host+port for this node")
 	nodeId     = flag.String("id", "node1", "Node ID")
+	bs         = flag.Bool("bs", false, "Bootstrap")
 )
 
 func main() {
 	flag.Parse()
 	mykv = &kv.KV{}
 	fmt.Println("Starting on " + string(*serverAddr))
-
-	mykv.InitRaft(*serverAddr, *nodeId)
 
 	router := mux.NewRouter()
 
@@ -39,24 +38,26 @@ func main() {
 	router.HandleFunc("/", handleMain)
 	router.HandleFunc("/Get/{key}", handleGet)
 	router.HandleFunc("/Put/{key}/{val}", handlePut)
-	router.HandleFunc("/AddVoter/{voter}/{id}/{bs}", handleAddVoter)
+	router.HandleFunc("/AddVoter/{voter}/{id}", handleAddVoter)
 
 	log.Println("KV Server is running!")
-	done := make(chan bool)
+	// done := make(chan bool)
 	go func() {
 		err := server.ListenAndServe()
 		if err != nil {
 			log.Printf("KV Server Main Listen and serve: %v", err)
 		}
-		done <- true
+		// done <- true
 	}()
+
+	mykv.InitRaft(*serverAddr, *nodeId, *bs)
 
 	//wait shutdown
 	server.WaitShutdown()
 
 	server.CloseMain()
 
-	<-done
+	// <-done
 	log.Printf("KV Server DONE!")
 }
 
@@ -98,8 +99,7 @@ func handleAddVoter(rw http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	voter := vars["voter"]
 	id := vars["id"]
-	bs := vars["bs"]
-	mykv.AddVoter(voter, id, bs)
+	mykv.AddVoter(voter, id)
 	response := map[string]string{
 		"message": "Welcome to KV - AddVoter " + voter + " " + id,
 	}

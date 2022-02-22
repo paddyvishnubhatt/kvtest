@@ -4,22 +4,28 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
+	"net"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/Jille/raft-grpc-leader-rpc/leaderhealth"
 	"github.com/Jille/raft-grpc-leader-rpc/rafterrors"
 	transport "github.com/Jille/raft-grpc-transport"
+	"github.com/Jille/raftadmin"
 	"github.com/hashicorp/raft"
 	boltdb "github.com/hashicorp/raft-boltdb"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 )
 
-var once sync.Once
 var myraft *raft.Raft
 
 const KV_STORE_NAME = "k-v-store"
+const DATA_DIR = "/tmp/raft_dir"
 const LOG_FILE = "logs.dat"
 const SFILE = "stable.dat"
 const SEPARATOR = "_"
@@ -30,14 +36,31 @@ type KV struct {
 	kv   map[string]string
 }
 
-func (kv *KV) InitRaft(serverAddr string, id string) {
-	fmt.Println("In KV.InitRaft " + serverAddr)
+func (kv *KV) InitRaft(serverAddr string, id string, bs bool) {
+	fmt.Printf("In KV.InitRaft %v %v %v\n", serverAddr, id, bs)
 	ctx := context.Background()
-	err := kv.SetupRaft(ctx, id, serverAddr)
+	r, tm, err := kv.SetupRaft(ctx, id, serverAddr, bs)
+	myraft = r
 	if err != nil {
 		fmt.Printf("Error creating Raft %v", err)
 	}
+	s := grpc.NewServer()
+	tm.Register(s)
+	leaderhealth.Setup(r, s, []string{"Example"})
+	raftadmin.Register(s, r)
+	reflection.Register(s)
+	_, port, err := net.SplitHostPort(serverAddr)
+	if err != nil {
+		log.Fatalf("failed to parse local address (%q): %v", serverAddr, err)
+	}
+	sock, err := net.Listen("tcp", fmt.Sprintf(":%s", port))
+	if err != nil {
+		log.Fatalf("failed to listen: %v", err)
+	}
 
+	if err := s.Serve(sock); err != nil {
+		log.Fatalf("failed to serve: %v", err)
+	}
 	fmt.Println("Done KV.InitRaft")
 }
 
@@ -79,8 +102,8 @@ func (kv *KV) Put(key string, val string) error {
 	return nil
 }
 
-func (kv *KV) AddVoter(voter string, id string, bs string) error {
-	fmt.Println("KV.AddVoter " + voter + " " + id + " " + bs)
+func (kv *KV) AddVoter(voter string, id string) error {
+	fmt.Println("KV.AddVoter " + voter + " " + id)
 	f := myraft.AddVoter(raft.ServerID(id), raft.ServerAddress(voter), 0, time.Second)
 	if err := f.Error(); err != nil {
 		return rafterrors.MarkRetriable(err)
@@ -88,33 +111,34 @@ func (kv *KV) AddVoter(voter string, id string, bs string) error {
 	return nil
 }
 
-func (kv *KV) SetupRaft(ctx context.Context, myID, myAddress string) error {
+func (kv *KV) SetupRaft(ctx context.Context, myID, myAddress string, bs bool) (*raft.Raft, *transport.Manager, error) {
 	c := raft.DefaultConfig()
 	c.LocalID = raft.ServerID(myID)
+	baseDir := filepath.Join(DATA_DIR, myID)
 
-	ldb, err := boltdb.NewBoltStore(LOG_FILE)
+	ldb, err := boltdb.NewBoltStore(filepath.Join(baseDir, LOG_FILE))
 	if err != nil {
-		return fmt.Errorf(`boltdb.NewBoltStore(%q): %v`, "logs.dat", err)
+		return nil, nil, fmt.Errorf(`boltdb.NewBoltStore(%q): %v`, "logs.dat", err)
 	}
 
-	sdb, err := boltdb.NewBoltStore(SFILE)
+	sdb, err := boltdb.NewBoltStore(filepath.Join(baseDir, SFILE))
 	if err != nil {
-		return fmt.Errorf(`boltdb.NewBoltStore(%q): %v`, "stable.dat", err)
+		return nil, nil, fmt.Errorf(`boltdb.NewBoltStore(%q): %v`, "stable.dat", err)
 	}
 
-	fss, err := raft.NewFileSnapshotStore(".", 3, os.Stderr)
+	fss, err := raft.NewFileSnapshotStore(baseDir, 3, os.Stderr)
 	if err != nil {
-		return fmt.Errorf(`raft.NewFileSnapshotStore: %v`, err)
+		return nil, nil, fmt.Errorf(`raft.NewFileSnapshotStore: %v`, err)
 	}
 
 	tm := transport.New(raft.ServerAddress(myAddress), []grpc.DialOption{grpc.WithInsecure()})
 
 	r, err := raft.NewRaft(c, kv, ldb, sdb, fss, tm.Transport())
 	if err != nil {
-		return fmt.Errorf("raft.NewRaft: %v", err)
+		return nil, nil, fmt.Errorf("raft.NewRaft: %v", err)
 	}
 
-	once.Do(func() {
+	if bs {
 		cfg := raft.Configuration{
 			Servers: []raft.Server{
 				{
@@ -128,11 +152,9 @@ func (kv *KV) SetupRaft(ctx context.Context, myID, myAddress string) error {
 		if err := f.Error(); err != nil {
 			fmt.Errorf("raft.Raft.BootstrapCluster: %v", err)
 		}
+	}
 
-		kv.kv = make(map[string]string)
-	})
+	kv.kv = make(map[string]string)
 
-	myraft = r
-
-	return nil
+	return r, tm, nil
 }

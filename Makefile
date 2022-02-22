@@ -6,7 +6,7 @@ local:
 	go build -o kvserver main.go
 clean: ## Remove temporary files
 	rm -f kvserver
-	rm -rf snapshots
-	rm -f *.dat
-	rm -f *.db
+	rm -rf /tmp/raft_dir
+	mkdir /tmp/raft_dir
+	mkdir /tmp/raft_dir/node{1,2,3}
 	go clean
