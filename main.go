@@ -15,7 +15,8 @@ import (
 var mykv *kv.KV
 
 var (
-	serverAddr = flag.String("address", "localhost:68964", "TCP host+port for this node")
+	serverAddr = flag.String("address", "localhost:10001", "TCP host+port for this node")
+	nodeId     = flag.String("id", "node1", "Node ID")
 )
 
 func main() {
@@ -23,7 +24,7 @@ func main() {
 	mykv = &kv.KV{}
 	fmt.Println("Starting on " + string(*serverAddr))
 
-	mykv.InitRaft(*serverAddr)
+	mykv.InitRaft(*serverAddr, *nodeId)
 
 	router := mux.NewRouter()
 
@@ -38,6 +39,7 @@ func main() {
 	router.HandleFunc("/", handleMain)
 	router.HandleFunc("/Get/{key}", handleGet)
 	router.HandleFunc("/Put/{key}/{val}", handlePut)
+	router.HandleFunc("/AddVoter/{voter}/{id}/{bs}", handleAddVoter)
 
 	log.Println("KV Server is running!")
 	done := make(chan bool)
@@ -88,6 +90,18 @@ func handlePut(rw http.ResponseWriter, r *http.Request) {
 
 	response := map[string]string{
 		"message": "Welcome to KV - Put ",
+	}
+	json.NewEncoder(rw).Encode(response)
+}
+
+func handleAddVoter(rw http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	voter := vars["voter"]
+	id := vars["id"]
+	bs := vars["bs"]
+	mykv.AddVoter(voter, id, bs)
+	response := map[string]string{
+		"message": "Welcome to KV - AddVoter " + voter + " " + id,
 	}
 	json.NewEncoder(rw).Encode(response)
 }

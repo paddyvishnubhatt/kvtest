@@ -30,10 +30,10 @@ type KV struct {
 	kv   map[string]string
 }
 
-func (kv *KV) InitRaft(serverAddr string) {
+func (kv *KV) InitRaft(serverAddr string, id string) {
 	fmt.Println("In KV.InitRaft " + serverAddr)
 	ctx := context.Background()
-	err := kv.SetupRaft(ctx, "node1", serverAddr)
+	err := kv.SetupRaft(ctx, id, serverAddr)
 	if err != nil {
 		fmt.Printf("Error creating Raft %v", err)
 	}
@@ -73,6 +73,15 @@ func (kv *KV) Get(key string) string {
 func (kv *KV) Put(key string, val string) error {
 	fmt.Println("KV.Putting " + key + " " + val)
 	f := myraft.Apply([]byte(key+SEPARATOR+val), time.Second)
+	if err := f.Error(); err != nil {
+		return rafterrors.MarkRetriable(err)
+	}
+	return nil
+}
+
+func (kv *KV) AddVoter(voter string, id string, bs string) error {
+	fmt.Println("KV.AddVoter " + voter + " " + id + " " + bs)
+	f := myraft.AddVoter(raft.ServerID(id), raft.ServerAddress(voter), 0, time.Second)
 	if err := f.Error(); err != nil {
 		return rafterrors.MarkRetriable(err)
 	}
@@ -119,6 +128,7 @@ func (kv *KV) SetupRaft(ctx context.Context, myID, myAddress string) error {
 		if err := f.Error(); err != nil {
 			fmt.Errorf("raft.Raft.BootstrapCluster: %v", err)
 		}
+
 		kv.kv = make(map[string]string)
 	})
 
