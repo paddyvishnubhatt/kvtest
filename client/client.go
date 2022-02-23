@@ -18,11 +18,12 @@ var (
 	nodeId     = flag.String("id", "node2", "Node ID")
 	skey       = flag.String("key", "somekey1", "Key to test")
 	sval       = flag.String("val", "someval1", "Val to set and test for key")
+	port       = flag.String("port", "10001", "Port running rpcserver on")
 )
 
 func main() {
 	flag.Parse()
-	addr := "localhost:10001"
+	addr := "localhost:" + *port
 	fmt.Printf("Connecting to RPC Server %v\n", *command)
 
 	rpcConn, err := grpc.Dial(addr, grpc.WithInsecure())
