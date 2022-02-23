@@ -18,6 +18,7 @@ import (
 type HTTPServer struct {
 	http.Server
 	ShutdownReq chan bool
+	mykv        *kv.KeyVal
 }
 
 func (s *HTTPServer) WaitShutdown() {
@@ -56,43 +57,36 @@ func (s *HTTPServer) CloseMain() {
 	// clean up map
 }
 
-var mykv *kv.KeyVal
-
-func RunServer(ikv *kv.KeyVal, serverAddr string, port int) {
-	fmt.Println("Starting on " + serverAddr)
-	mykv = ikv
-
+func (s *HTTPServer) RunServer(ikv *kv.KeyVal, serverAddr string, port int) {
+	fmt.Printf("KV Server Starting on %v %d\n", serverAddr, port)
+	p := fmt.Sprintf(":%d", port)
 	router := mux.NewRouter()
+	s.Addr = p
+	s.mykv = ikv
+	s.Handler = router
+	s.ShutdownReq = make(chan bool)
 
-	server := &HTTPServer{
-		Server: http.Server{
-			Addr:    ":" + string(port),
-			Handler: router,
-		},
-		ShutdownReq: make(chan bool),
-	}
+	router.HandleFunc("/", s.handleMain)
+	router.HandleFunc("/Get/{key}", s.handleGet)
+	router.HandleFunc("/Put/{key}/{val}", s.handlePut)
+	router.HandleFunc("/AddVoter/{voter}/{id}", s.handleAddVoter)
 
-	router.HandleFunc("/", handleMain)
-	router.HandleFunc("/Get/{key}", handleGet)
-	router.HandleFunc("/Put/{key}/{val}", handlePut)
-	router.HandleFunc("/AddVoter/{voter}/{id}", handleAddVoter)
-
-	log.Println("KV Server is running!")
+	log.Printf("KV Server is running %v %d\n", serverAddr, port)
 	go func() {
-		err := server.ListenAndServe()
+		err := s.ListenAndServe()
 		if err != nil {
-			log.Printf("KV Server Main Listen and serve: %v", err)
+			log.Printf("Error KV Server Main Listen and serve: %v\n", err)
 		}
 	}()
-	server.WaitShutdown()
+	s.WaitShutdown()
 
-	server.CloseMain()
+	s.CloseMain()
 
 	log.Printf("KV Server DONE!")
 
 }
 
-func handleMain(rw http.ResponseWriter, r *http.Request) {
+func (s *HTTPServer) handleMain(rw http.ResponseWriter, r *http.Request) {
 	log.Println("main.handleMain")
 
 	response := map[string]string{
@@ -101,10 +95,10 @@ func handleMain(rw http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(rw).Encode(response)
 }
 
-func handleGet(rw http.ResponseWriter, r *http.Request) {
+func (s *HTTPServer) handleGet(rw http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	key := vars["key"]
-	val := mykv.Get(key)
+	val := s.mykv.Get(key)
 	response := map[string]string{
 		"message": "Welcome to KV - Get (" + key + "): " + val,
 	}
@@ -113,11 +107,11 @@ func handleGet(rw http.ResponseWriter, r *http.Request) {
 	fmt.Println("In handleGet " + key + ": " + val)
 }
 
-func handlePut(rw http.ResponseWriter, r *http.Request) {
+func (s *HTTPServer) handlePut(rw http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	key := vars["key"]
 	val := vars["val"]
-	mykv.Put(key, val)
+	s.mykv.Put(key, val)
 	log.Println("main.handlePut " + key + " " + val)
 
 	response := map[string]string{
@@ -126,11 +120,11 @@ func handlePut(rw http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(rw).Encode(response)
 }
 
-func handleAddVoter(rw http.ResponseWriter, r *http.Request) {
+func (s *HTTPServer) handleAddVoter(rw http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	voter := vars["voter"]
 	id := vars["id"]
-	mykv.AddVoter(voter, id)
+	s.mykv.AddVoter(voter, id)
 	response := map[string]string{
 		"message": "Welcome to KV - AddVoter " + voter + " " + id,
 	}

@@ -4,6 +4,7 @@ import (
 	"flag"
 	"kvtest/kv"
 	"kvtest/server"
+	"strings"
 )
 
 var (
@@ -18,7 +19,9 @@ func main() {
 	mykv := &kv.KeyVal{}
 
 	if *bs {
-		go server.RunServer(mykv, *serverAddr, *port)
+		s := strings.Split(*serverAddr, ":")
+		srv := server.HTTPServer{}
+		go srv.RunServer(mykv, strings.Trim(s[0], " "), *port)
 	}
 
 	mykv.InitRaft(*serverAddr, *nodeId, *bs)
