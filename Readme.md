@@ -5,6 +5,17 @@ To build
 2. make clean
 3. make
 
+```
+Usage of ./kvserver:
+  -address string
+    	TCP host+port for this node (default "localhost:10001")
+  -bs
+    	Bootstrap
+  -id string
+    	Node ID (default "node1")
+  -port int
+    	Port running the http server on bs node (default 9000)
+```
 To run kv/raft nodes:
 1. ./kvserver --address=localhost:10001 --id=node1 --bs=true
 2. ./kvserver --address=localhost:10002 --id=node2 
